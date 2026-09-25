@@ -69,4 +69,4 @@ The memory usage is recorded separately from the FPS. Each zone module is run in
 ### Initialization
 While initialization performance is not as important as runtime performance, it's still a sign of the library's overall efficiency. In my opinion, any library that cannot register more than 100K zones has some serious performance issues. Furthermore, if a library crashes when registering 10k zones, it'll freeze the game for a few seconds when registering 1000 zones, cause lag spikes when registering 100 zones, etc; that is, the threshold for lag/stutters is much lower than that for crashes.
 
-That said, ZoneService does sacrifice some initialization performance in exchange for more favorable runtime performance. Specifically, it does extra work computing/caching certain values to minimize the amount of runtime work.
+That said, ZoneService does sacrifice some initialization performance in exchange for more favorable runtime performance. Specifically, it does extra work computing/caching certain values to minimize the amount of runtime work, which explains why it's slightly slower than QuickZone in the initialization test.
