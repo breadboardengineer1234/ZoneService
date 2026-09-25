@@ -43,8 +43,8 @@ Each library is used to register as many zones as possible without yielding unti
 | ZonePlus | 7K
 | Zoner | 12K
 | SimplerZone | 47K
-| QuickZone | 4M
-| **ZoneService** | **3.5M**
+| QuickZone | 4.3M
+| **ZoneService** | **4.1M**
 
 ## Methodology
 ### Isolating zone library performance
