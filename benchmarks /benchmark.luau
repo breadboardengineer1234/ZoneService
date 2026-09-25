@@ -90,7 +90,7 @@ local function setupZoneService(numSubjects: number, numZones: number, abstractS
 	return subjects
 end
 
-local function setupZonePlus(numSubjects: number, numZones: number)
+local function setupZonePlus(numSubjects: number, numZones: number): {BasePart}
 	local subjects = createPartSubjects(numSubjects)
 	local count = 0
 	
@@ -113,7 +113,7 @@ local function setupZonePlus(numSubjects: number, numZones: number)
 	return subjects
 end
 
-local function setupSimplerZone(numSubjects: number, numZones: number)
+local function setupSimplerZone(numSubjects: number, numZones: number): {BasePart}
 	local subjects = createPartSubjects(numSubjects)
 	local shapeInstances = table.create(numZones)
 	local zones = table.create(numZones)
@@ -139,7 +139,7 @@ local function setupSimplerZone(numSubjects: number, numZones: number)
 	return subjects	
 end
 
-local function setupZoner(numSubjects: number, numZones: number)
+local function setupZoner(numSubjects: number, numZones: number): {BasePart}
 	local subjects = createPartSubjects(numSubjects)
 	local zones = table.create(numZones)
 
