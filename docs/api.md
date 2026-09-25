@@ -90,7 +90,7 @@ end
 ```
 
 ### ``:getZonesAtPoint(point: Vector3): {string}``
-Returns a table of the names of zones that intersect with the given point. Unlike `:getZones`, this method queries the BVH.
+Returns a table of the names of zones that intersect the given point. Unlike `:getZones`, this method queries the BVH.
 ```lua
 local zones = ZoneService:getZonesAtPoint(Vector3.new(1, 2, 3))
 ```
@@ -102,7 +102,7 @@ local inZone = ZoneService:isPointInZone("AFKZone", Vector3.new(1, 2, 3))
 ```
 
 ### ``:getRandomPointInZone(zoneName: string): Vector3``
-Returns a random position that intersects with the given zone.
+Returns a random position that intersects the given zone.
 ```lua
 local randomPoint = ZoneService:getRandomPointInZone("FightZone")
 ```
