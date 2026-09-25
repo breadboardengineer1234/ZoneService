@@ -60,5 +60,10 @@ A similar accommodation was made for ZonePlus. Furthermore, ZonePlus is differen
 ### Why only QuickZone and ZoneService are included in heavy tests
 The other 3 libraries are simply too slow to handle these tests. No amount of task.waits or other tricks can save them from running out of execution time during initialization. Even if they got past it, they would still crash studio during runtime. QuickZone and ZoneService are orders of magnitude faster than the other 3, to an extent not captured by the light tests. In fact, the main point of the heavy tests is to observe the performance difference between the two, as the light tests don't have enough load to tell them apart.
 
+### Polling Rate
+Note different zone modules handle polling differently. For example, QuickZone has a time-based polling system, while ZoneService has a frame-based one. In the tests above ZoneService was configured with a polling interval of 2 frames, meaning it scans the same subject every other frame. QuickZone, on the other hand, was configured with a 30hz polling rate. As a result, ZoneService scanned entities more frequently in every test, as in order to drop below 30hz with a 2-frame interval ZoneService would have to run at less than 60 FPS. In fact, if the polling interval was increased to 8 frames ZoneService would run at **220 FPS**, meaning it would have over 10x the performance of QuickZone while still scanning more frequently (220 / 8 = 27.5hz), as even though QuickZone is set at 30hz it cannot scan more frequently than its FPS.
+
+ZonePlus was configured with a precision of Precise, despite having a default precision of High.
+
 ### Memory Usage
 The memory usage is recorded separately from the FPS. Each zone module is run individually for each test and I manually opened console and recorded the usage shown in the Luau heap.
