@@ -52,6 +52,7 @@ local function createAbstractSubjects(numSubjects: number): {{Position: Vector3}
 end
 
 local function setupQuickZone(numSubjects: number, numZones: number, abstractSubjects: boolean?)
+	: {BasePart} | {{Position: Vector3}}
 	QuickZone:setFrameBudget(1000000000)
 
 	local observer = Observer.new({
@@ -75,6 +76,7 @@ local function setupQuickZone(numSubjects: number, numZones: number, abstractSub
 end
 
 local function setupZoneService(numSubjects: number, numZones: number, abstractSubjects: boolean?)
+	: {BasePart} | {{Position: Vector3}}
 	local subjects = abstractSubjects and createAbstractSubjects(numSubjects) or createPartSubjects(numSubjects)
 	for _, subj in subjects do
 		ZoneService:track(subj)
@@ -175,7 +177,7 @@ local setups = {
 }
 
 local function test(name: string, numSubjects: number, numZones: number, abstractSubjects: boolean?)
-	local setup = setups[name] :: (numSubjects: number, numZones: number) -> ({{Position: Vector3}})
+	local setup = setups[name] :: (numSubjects: number, numZones: number) -> ({BasePart} | {Position: Vector3})
 	local subjects = setup(numSubjects, numZones, abstractSubjects)
 	local frameTime = 0
 	local timestamp
