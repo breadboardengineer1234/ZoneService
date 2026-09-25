@@ -115,16 +115,16 @@ Players.PlayerRemoving:Connect(function(player)
 end)
 ```
 
-### ``.changed(subject: Subject, group: string, callback: (zoneName: string?) -> (), prefire: boolean?): Signal.Connection<string?>,``
+### ``.changed(subject: Subject, group: string, callback: (zoneName: string?) -> (), prefire: boolean?): Signal.Connection<string?>``
 Connects the given callback to the changed signal for the given group. This changed signal fires with the zone name whenever a subject changes zones within the same group. If the subject exits a zone but doesn't enter a new one, the signal is fired with `nil`. The prefire parameter (true by default) determines if the callback runs once immediately.
 ```lua
 Players.PlayerAdded:Connect(function(player)
   ZoneService.changed(player, "SafeZones", function(zoneName)
-    print(player.Name.." is now in zone "..zoneName)
-  end)
+    print(player.Name.." is now in "..zoneName)
+  end, false)
 end)
 ```
-### ``.entered(zoneName: string, callback: (subject: Subject) -> ()): Signal.Connection<Subject>,``
+### ``.entered(zoneName: string, callback: (subject: Subject) -> ()): Signal.Connection<Subject>``
 Connects the given callback to the entered signal of the given zone. When any subject enters the zone the signal fires with the subject in the argument. 
 ```lua
 ZoneService.entered("SafeZone", function(player)
@@ -132,7 +132,7 @@ ZoneService.entered("SafeZone", function(player)
 end)
 ```
 
-### ``.exited(zoneName: string, callback: (subject: Subject) -> ()): Signal.Connection<Subject>,``
+### ``.exited(zoneName: string, callback: (subject: Subject) -> ()): Signal.Connection<Subject>``
 Connects the given callback to the exited signal of the given zone. When any subject exits the zone the signal fires with the subject in the argument. 
 ```lua
 ZoneService.exited("SafeZone", function(player)
@@ -140,13 +140,13 @@ ZoneService.exited("SafeZone", function(player)
 end)
 ```
 
-### ``:setPriority(zoneName: string, priority: number),``
+### ``:setPriority(zoneName: string, priority: number)``
 Sets the priority of the given zone. Higher priority value equals higher priority.
 ```lua
 ZoneService:setPriority("HealingZone", 50)
 ```
 
-### ``:getZones(subject: Subject): {string}?,``
+### ``:getZones(subject: Subject): {string}?``
 Returns a table of the names of zones the subject is currently in.
 ```lua
 local zones = ZoneService:getZones(player)
@@ -155,7 +155,7 @@ for _, zone in zones do
 end
 ```
 
-### ``:getSubjectsInZoneFlags(zoneName: string): {[Subject]: boolean}?,``
+### ``:getSubjectsInZoneFlags(zoneName: string): {[Subject]: boolean}?``
 Returns a list of players in the given zone in the form of a dictionary with subject keys and boolean values. Note the flags don't mean anything since only subjects currently in the zone are keyed in the dictionary.
 ```lua
 local playersInLobby = ZoneService:getSubjectsInZoneFlags("LobbyZone")
@@ -164,7 +164,7 @@ for player, _ in playersInLobby do
 end
 ```
 
-### ``:getZonesAtPoint(point: Vector3): {string},``
+### ``:getZonesAtPoint(point: Vector3): {string}``
 Returns a table of the names of zones that intersect with the given point. Unlike `:getZones`, this method queries the BVH.
 ```lua
 local zones = ZoneService:getZonesAtPoint(Vector3.new(1, 2, 3))
@@ -176,7 +176,7 @@ Self explanatory.
 local inZone = ZoneService:isPointInZone("AFKZone", Vector3.new(1, 2, 3))
 ```
 
-### ``:getRandomPointInZone(zoneName: string): Vector3,``
+### ``:getRandomPointInZone(zoneName: string): Vector3``
 Returns a random position that intersects with the given zone.
 ```lua
 local randomPoint = ZoneService:getRandomPointInZone("FightZone")
