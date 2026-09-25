@@ -55,7 +55,7 @@ That said, the adjustment can result in unexpected FPS calculations in some case
 ### Zoner and ZonePlus
 Unlike the other libraries Zoner only supports tracking players, making it impossible to benchmark in high entity count scenarios. Therefore it only participated in the first benchmark with a single entity. In addition, due to slow initialization performance task.wait()'s were added to Zoner's setup to ensure execution time isn't exceeded. 
 
-A similar accommodation was made for ZonePlus. Furthermore, ZonePlus is different than the other libraries in that it doesn't actually scan unless signals are connected for each zone. Therefore, I connected .ItemExited signals during ZonePlus's setup.
+A similar accommodation was made for ZonePlus. Furthermore, ZonePlus is different than the other libraries in that it doesn't actually scan unless signals are connected for each zone. Therefore, I connected .ItemExited signals during ZonePlus's setup. Note ZonePlus has a tendency to crash studio on cleanup, so it's important it always runs last in the tests so we can leave it uncleaned without it affecting other zone libraries.
 
 ### Why only QuickZone and ZoneService are included in heavy tests
 The other 3 libraries are simply too slow to handle these tests. No amount of task.waits or other tricks can save them from running out of execution time during initialization. Even if they got past it, they would still crash studio during runtime. QuickZone and ZoneService are orders of magnitude faster than the other 3, to an extent not captured by the light tests. In fact, the main point of the heavy tests is to observe the performance difference between the two, as the light tests don't have enough load to tell them apart.
