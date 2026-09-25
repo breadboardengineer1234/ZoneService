@@ -11,8 +11,8 @@ All tests are conducted with stationary zones and continuously moving entities.
 | ZonePlus | 37.20 | 129.17
 | Zoner | 40.23 | 141.16
 | SimplerZone | 63.17 | 30.75
-| QuickZone | 240.43 | 15.98
-| **ZoneService** | **240.46** | **12.18** 
+| QuickZone | 240.00 | 15.98
+| **ZoneService** | **240.00** | **12.18** 
 
 ### Light Test 2 (1000 zones, 500 entities)
 | Library | FPS | Memory Usage (MB) |
