@@ -72,3 +72,36 @@ The memory usage is recorded separately from the FPS. Each zone module is run in
 While initialization performance is not as important as runtime performance, it's still a sign of the library's overall efficiency. In my opinion, any library that cannot register more than 100K zones has some serious performance issues. Furthermore, if a library crashes when registering 10k zones, it'll freeze the game for a few seconds when registering 1000 zones, cause lag spikes when registering 100 zones, etc; that is, the threshold for lag/stutters is much lower than that for crashes.
 
 That said, ZoneService does sacrifice some initialization performance in exchange for more favorable runtime performance. Specifically, it does extra work computing/caching certain values to minimize the amount of runtime work, which explains why it's slightly slower than QuickZone in the initialization test.
+
+# API
+
+## ``:addZone(zoneName: string, group: string, cframe: CFrame, size: Vector3, shape: Shape, params: Params?)``
+Add an abstract zone described by CFrame and size.
+```lua
+ZoneService:addZone("ZoneA", "SafeZones", CFrame.new(5, 20, 8), Vector3.new(10, 10, 10), "Block", {Priority = 20, Dynamic = false})
+```
+
+## ``:addZoneFromPart(zoneName: string, group: string, part: BasePart, params: Params?)``
+Add a zone from a BasePart.
+```lua
+Example: ZoneService:addZoneFromPart("ZoneB", "SafeZones", somePart, {Priority = 20, Dynamic = false})
+```
+
+## ``:removeZone(zoneName: string)``
+Cleans up the zone and disconnects its signals.
+```lua
+ZoneService:removeZone("FightZone")
+```
+
+### ``:updateZone(zoneName: string, cframe: CFrame, size: Vector3)``
+Updates the CFrame and size of the zone. If the zone is static, calling this method also schedules a BVH rebuild.
+```lua
+ZoneService:updateZone("FightZone", CFrame.new(), Vector3.new(1, 2, 3)) 
+```
+
+### ``.ballSize(radius: number): Vector3``
+Helper for getting a Vector3 size given a radius.
+```lua
+local ballSize = ZoneService.ballSize(5)
+```
+
