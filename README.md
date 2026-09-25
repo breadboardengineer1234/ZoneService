@@ -69,6 +69,6 @@ To make the comparisons fair, ZonePlus was configured with a precision (its vers
 The memory usage is recorded separately from the FPS. Each zone module is run individually for each test and the memory usage is recorded manually by opening the console and observing the Luau heap.
 
 ### Initialization
-While initialization performance is not as important as runtime performance, it's still a sign of the library's overall efficiency. In my opinion, any library that cannot register more than 100K zones has some serious performance issues. Furthermore, if a library crashes when registering 10k zones, it'll freeze the game for a few seconds when registering 1000 zones, and cause lag spikes when registering 100 zones, etc; that is, the threshold for lag/stutters is much lower than that for crashes.
+While initialization performance is not as important as runtime performance, it's still a sign of the library's overall efficiency. In my opinion, any library that cannot register more than 100K zones has some serious performance issues. Furthermore, if a library crashes when registering 10k zones, it'll freeze the game for a few seconds when registering 1000 zones, cause lag spikes when registering 100 zones, etc; that is, the threshold for lag/stutters is much lower than that for crashes.
 
 That said, ZoneService does sacrifice some initialization performance in exchange for more favorable runtime performance. Specifically, it does extra work computing/caching certain values to minimize the amount of runtime work.
