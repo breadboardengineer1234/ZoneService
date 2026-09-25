@@ -66,4 +66,4 @@ Note different zone modules handle polling differently. For example, QuickZone h
 To make the comparisons fair, ZonePlus was configured with a precision (its version of polling rate) Precise. Based on testing, ZonePlus polls at ~7Hz with the default High setting in benchmarks, which is far too low and gives it an unfair advantage. However, when using the Precise setting it polls at ~28 hz, which is more in line with the other libraries.
 
 ### Memory Usage
-The memory usage is recorded separately from the FPS. Each zone module is run individually for each test and I manually opened console and recorded the usage shown in the Luau heap.
+The memory usage is recorded separately from the FPS. Each zone module is run individually for each test and the memory usage is recorded manually by opening the console and observing the Luau heap.
