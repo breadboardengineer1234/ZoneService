@@ -2,7 +2,7 @@
 --!native
 
 --[[
-u5eful's ZoneService v0.1.3
+u5eful's ZoneService v0.2.0
 
 Features:
 -Uses linear bvh tree for O(logN) zone query
