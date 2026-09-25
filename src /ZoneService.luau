@@ -24,7 +24,7 @@ For best performance:
 
 *This module is designed mainly for static zones. Therefore, build cost of tree is somewhat high while query is
 very cheap. Since any time a zone changes position or size the tree needs to be rebuilt, dynamic zones are stored
-separately in a linear array. Therefore the scalability is low for dynamic zones.
+separately in a linear table. Therefore the scalability is low for dynamic zones.
 ]]
 
 local RunService = game:GetService("RunService")
