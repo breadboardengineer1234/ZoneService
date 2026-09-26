@@ -1,7 +1,7 @@
 # API
 
 ### ``:addZone(zoneName: string, group: string, cframe: CFrame, size: Vector3, shape: Shape, params: Params?)``
-Add an abstract zone described by CFrame and size.
+Add an abstract zone described by CFrame and size. The params argument expects an optional Params object, which has the type `{Priority: number?, Dynamic: boolean?}`. If the zone moves or resizes frequently Dynamic should be set to true for best performance. On the other hand, if the zone never or only rarely changes, set Dynamic to false.
 ```lua
 ZoneService:addZone("ZoneA", "SafeZones", CFrame.new(5, 20, 8), Vector3.new(10, 10, 10), "Block", {Priority = 20, Dynamic = false})
 ```
