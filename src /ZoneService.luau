@@ -2,7 +2,7 @@
 --!native
 
 --[[
-u5eful's ZoneService v0.2.0
+u5eful's ZoneService v0.2.1
 
 Features:
 -Uses linear bvh tree for O(logN) zone query
@@ -344,7 +344,8 @@ end
 Cleans up the zone and disconnects all its signals
 ]]
 function Zone.removeZone(self: ZoneService, zoneName: string)
-	local info = zones[zoneName] or dynamicZones[zoneName]
+	local static, dynamic = zones[zoneName], dynamicZones[zoneName]
+	local info = static or dynamic
 	if not info then return end
 	zones[zoneName] = nil
 	dynamicZones[zoneName] = nil
@@ -366,7 +367,9 @@ function Zone.removeZone(self: ZoneService, zoneName: string)
 		buffer.writeu32(subjInfo.PrevZones, groupId * 4, 0)
 	end
 	if exitSignal then exitSignal:DisconnectAll() end
-	rebuildBVH = true
+	if static then
+		rebuildBVH = true
+	end
 end
 
 function Zone.ballSize(radius: number): Vector3
