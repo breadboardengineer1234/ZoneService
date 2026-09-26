@@ -9,7 +9,7 @@ ZoneService:addZone("ZoneA", "SafeZones", CFrame.new(5, 20, 8), Vector3.new(10, 
 ### ``:addZoneFromPart(zoneName: string, group: string, part: BasePart, params: Params?)``
 Add a zone from a BasePart.
 ```lua
-Example: ZoneService:addZoneFromPart("ZoneB", "SafeZones", somePart, {Priority = 20, Dynamic = false})
+ZoneService:addZoneFromPart("ZoneB", "SafeZones", somePart, {Priority = 20, Dynamic = false})
 ```
 
 ### ``:removeZone(zoneName: string)``
