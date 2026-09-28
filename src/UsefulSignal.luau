@@ -1,5 +1,4 @@
 --!optimize 2
---!native
 
 export type Connection<T...> = {
 	Connected: boolean,

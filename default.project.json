@@ -4,14 +4,7 @@
     "$className": "DataModel",
     "ReplicatedStorage": {
       "ZoneService": {
-        "$path": "src",
-        "$properties": {
-          "Attributes": {
-            "Version": {
-              "String": "0.3.0"
-            }
-          }
-        }
+        "$path": "src"
       }
     }
   }

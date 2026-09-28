@@ -1,3 +1,5 @@
+--!strict
+
 --!optimize 2
 --!native
 
@@ -5,23 +7,25 @@
 u5eful's ZoneService v0.3.0
 
 Features:
--Uses linear bvh tree for O(logN) zone query
--Can distribute work across multiple frames to increase performance
--Built in subject-centric and zone-centric signals
--Supports multiple different shapes and rotated zones
--Supports dynamic zones (cframe and size)
--Supports zone groups for independent zone signals
--Priority system to resolve overlapping zones within the same group
--Register subjects and zones with simple API
+	-Uses linear bvh tree for O(logN) zone query
+	-Can distribute work across multiple frames to increase performance
+	-Built in subject-centric and zone-centric signals
+	-Supports multiple different shapes and rotated zones
+	-Supports dynamic zones (cframe and size)
+	-Supports zone groups for independent zone signals
+	-Priority system to resolve overlapping zones within the same group
+	-Register subjects and zones with simple API
 
 For best performance:
--Do not have many overlapping zones
--Track fewer subjects
--Use a minimal # of dynamic zones (recommended < 1000)
--Use a minimal # of zone groups (recommended < 20)
--Use block zones with (0, 0, 0) orientation whenever possible
--Use a polling interval > 1 frame (larger interval = better performance)
+	-Do not have many overlapping zones
+	-Track fewer subjects
+	-Use a minimal # of dynamic zones (recommended < 1000)
+	-Use a minimal # of zone groups (recommended < 20)
+	-Use block zones with (0, 0, 0) orientation whenever possible
+	-Use a polling interval > 1 frame (larger interval = better performance)
 ]]
+
+local ZoneService = {}
 
 local RunService = game:GetService("RunService")
 
@@ -44,15 +48,15 @@ const ENUM_PLAYER = Enums.Player
 const ENUM_MODEL = Enums.Model
 const ENUM_OTHER = Enums.Other
 
-type Signal<T...> = Types.Signal<T...>
-export type Params = Types.Params
-type ZoneInfo = Types.ZoneInfo
-export type Subject = Types.Subject
-type SubjectInfo = Types.SubjectInfo
-export type Shape = Types.Shape
-type Bucket = Types.Bucket
-export type ZoneService = Types.ZoneService
 type Tree = Types.Tree
+type Bucket = Types.Bucket
+type ZoneInfo = Types.ZoneInfo
+type SubjectInfo = Types.SubjectInfo
+type Signal<T...> = Types.Signal<T...>
+
+export type Shape = Types.Shape
+export type Params = Types.Params
+export type Subject = Types.Subject
 
 local function getFrameBuckets(numFrames: number, buckets: {Bucket}?): {Bucket}
 	if buckets then
@@ -60,9 +64,9 @@ local function getFrameBuckets(numFrames: number, buckets: {Bucket}?): {Bucket}
 	end
 	buckets = buckets or {}
 	for i = 1, numFrames do
-		table.insert(buckets, {})
+		table.insert(buckets :: {Bucket}, {} :: Bucket)
 	end
-	return buckets
+	return buckets :: {Bucket}
 end
 
 local function initBucketSizes(numFrames: number, sizes: {number}?): {number}
@@ -71,33 +75,35 @@ local function initBucketSizes(numFrames: number, sizes: {number}?): {number}
 	end
 	sizes = sizes or {}
 	for i = 1, numFrames do
-		sizes[i] = 0
+		(sizes :: {number})[i] = 0
 	end
-	return sizes
+	return sizes :: {number}
 end
 
-local numFrames: number = POLLING_INTERVAL
-local frameNum: number = 0
-local pollConnection: RBXScriptConnection? = nil
-local zoneId: number = 1 --start at 1
-local groupId: number  = 0 --start at 0
-local groupTracker: {[string]: number} = {}
+local DeferredFlag: boolean = false
 
-local numStaticZones: number = 0
-local numDynamicZones: number = 0
-local zones: {[string]: ZoneInfo} = {}
-local zonesById: {[number]: ZoneInfo} = {}
-local dynamicZones: {[string]: ZoneInfo} = {}
+local NumFrames: number = POLLING_INTERVAL
+local FrameNum: number = 0
+local PollConnection: RBXScriptConnection? = nil
+local CurrentZoneId: number = 1
+local GroupId: number  = 0 --start at 0
+local GroupTracker: {[string]: number} = {}
 
-local subjects: {Bucket} = getFrameBuckets(numFrames)
-local subjectsTracker: {[Subject]: SubjectInfo} = {}
-local subjectsFrameIdx: {[Subject]: number} = {}
-local bucketSizes: {number} = initBucketSizes(numFrames)
+local NumStaticZones: number = 0
+local NumDynamicZones: number = 0
+local Zones: {[string]: ZoneInfo} = {}
+local ZonesById: {[number]: ZoneInfo} = {}
+local DynamicZones: {[string]: ZoneInfo} = {}
 
-local rebuildStatic: boolean = false
-local rebuildDynamic: boolean = false
-local staticTree: Tree = BVH.new()
-local dynamicTree: Tree = BVH.new()
+local Subjects: {Bucket} = getFrameBuckets(NumFrames)
+local SubjectsTracker: {[Subject]: SubjectInfo} = {}
+local SubjectsFrameIdx: {[Subject]: number} = {}
+local BucketSizes: {number} = initBucketSizes(NumFrames)
+
+local RebuildStatic: boolean = false
+local RebuildDynamic: boolean = false
+local StaticTree: Tree = BVH.new()
+local DynamicTree: Tree = BVH.new()
 
 local function getRadiusBall(size: Vector3): number
 	return math.min(size.X, size.Y, size.Z) * .5
@@ -207,7 +213,7 @@ local function getSmallestBucket(): number
 	local smallestSize = math.huge
 	local smallestIdx = 1
 
-	for i, size in bucketSizes do
+	for i, size in BucketSizes do
 		if size <= smallestSize then
 			smallestSize = size
 			smallestIdx = i
@@ -217,11 +223,11 @@ local function getSmallestBucket(): number
 end
 
 local function getFrameNum(): number
-	frameNum += 1
-	if frameNum > numFrames then
-		frameNum = 1
+	FrameNum += 1
+	if FrameNum > NumFrames then
+		FrameNum = 1
 	end
-	return frameNum
+	return FrameNum
 end
 
 local function getDimensionsCylinder(size: Vector3): (number, number)
@@ -303,120 +309,116 @@ local function updateTreeBounds(tree: Tree, zones: {[string]: ZoneInfo})
 	local max = vector.create(-math.huge, -math.huge, -math.huge)
 
 	for _, zone in zones do
-		min = vector.min(zone.PosLower :: vector, min)
-		max = vector.max(zone.PosUpper :: vector, max)
+		min = vector.min(zone.PosLower :: any, min)
+		max = vector.max(zone.PosUpper :: any, max)
 	end
 	tree:setBounds(min, max)
 end
 
---API start
-local Zone: ZoneService = {}
 
---[[
-Add an abstract zone described by CFrame and size
-Example: ZoneService:addZone("ZoneA", "SafeZones", CFrame.new(5, 20, 8), Vector3.new(10, 10, 10), "Block", {Priority = 20, Dynamic = false})
-]]
-function Zone.addZone(self: ZoneService, zoneName: string, group: string, cframe: CFrame, size: Vector3, shape: Shape,
-	params: {Priority: number?, Dynamic: boolean?}?)
-	if zones[zoneName] ~= nil or dynamicZones[zoneName] ~= nil then
-		warn(SOURCE.." Failed to add zone "..zoneName..": already registered")
+local function addZone(zoneName: string, group: string, cframe: CFrame, size: Vector3, shape: Shape, params: {Priority: number?, Dynamic: boolean?}?)
+	local existingGroupId = GroupTracker[group]
+	if not existingGroupId and GroupId >= MAX_GROUPS then
+		warn(`{SOURCE} Failed to add zone {zoneName}: exceeded max number of groups ({MAX_GROUPS})`)
 		return
 	end
 	
-	local existingGroupId = groupTracker[group]
-	if not existingGroupId and groupId >= MAX_GROUPS then
-		warn(SOURCE.. "Failed to add zone "..zoneName..": exceeded max number of groups ("..MAX_GROUPS..")")
-		return
-	end
-
-	local info = {}
+	local info = {} :: ZoneInfo
 	if shape == "Block" then
 		info.Type = ENUM_BLOCK
 		updateBlock(cframe, size, info)
-		
+
 	elseif shape == "Ball" then
 		info.Type = ENUM_BALL
 		updateBall(cframe, size, info)
-		
+
 	elseif shape == "Cylinder" then
 		info.Type = ENUM_CYLINDER
 		updateCylinder(cframe, size, info)
-		
+
 	elseif shape == "Wedge" then
 		info.Type = ENUM_WEDGE
 		updateWedge(cframe, size, info)
-		
+
 	elseif shape == "CornerWedge" then
 		info.Type = ENUM_CORNERWEDGE
 		updateCornerWedge(cframe, size, info)
-		
+
 	else
-		warn(SOURCE.." Unsupported shape "..shape)
+		warn(`{SOURCE} Unsupported shape {shape}`)
 		return
 	end
 	info.Size = size
-	
+
 	local dynamic = false
 	local priority = DEFAULT_PRIORITY
 	if params then
 		dynamic = params.Dynamic or dynamic
 		priority = params.Priority or priority
 	end
-	
+
 	local newGroupId
 	if existingGroupId then
 		newGroupId = existingGroupId
 	else
-		newGroupId = groupId
-		groupId += 1
-		groupTracker[group] = newGroupId
+		newGroupId = GroupId
+		GroupId += 1
+		GroupTracker[group] = newGroupId
 	end
-	
-	info.ZoneId = zoneId
+
+	info.ZoneId = CurrentZoneId
 	info.GroupId = newGroupId
 	info.Name = zoneName
 	info.Group = group
 	info.Priority = priority
 	info.Dynamic = dynamic
 	info.Subjects = {}
-	
-	zonesById[zoneId] = info
-	zoneId += 1
+
+	ZonesById[CurrentZoneId] = info
+	CurrentZoneId += 1
+
 	if dynamic then
-		dynamicTree:updateBounds(info.PosLower, info.PosUpper)
-		dynamicZones[zoneName] = info
-		numDynamicZones += 1
-		rebuildDynamic = true
-		
+		DynamicTree:updateBounds(info.PosLower, info.PosUpper)
+		DynamicZones[zoneName] = info
+		NumDynamicZones += 1
+		RebuildDynamic = true
 	else
-		zones[zoneName] = info
-		numStaticZones += 1
-		rebuildStatic = true
+		Zones[zoneName] = info
+		NumStaticZones += 1
+		RebuildStatic = true
 	end
 end
-
 --[[
-Add a zone from a BasePart
-Example: ZoneService:addZoneFromPart("ZoneB", "SafeZones", somePart, {Priority = 20, Dynamic = false})
+	Add an abstract zone described by CFrame and size
+	Example: ZoneService:addZone("ZoneA", "SafeZones", CFrame.new(5, 20, 8), Vector3.new(10, 10, 10), "Block", {Priority = 20, Dynamic = false})
 ]]
-function Zone.addZoneFromPart(self: ZoneService, zoneName: string, group: string, part: BasePart, 
-	params: {Priority: number?, Dynamic: boolean?}?)
-	local shape = part.Shape.Name
-	local cframe = part.CFrame
-	local size = part.Size	
-	self:addZone(zoneName, group, cframe, size, shape, params)
+function ZoneService:addZone(zoneName: string, group: string, cframe: CFrame, size: Vector3, shape: Shape, params: {Priority: number?, Dynamic: boolean?}?)
+	if Zones[zoneName] ~= nil or DynamicZones[zoneName] ~= nil then
+		warn(`{SOURCE} Failed to add zone {zoneName}: already registered`)
+		return
+	end
+	
+	addZone(zoneName, group, cframe, size, shape, params)
 end
 
 --[[
-Cleans up the zone and disconnects all its signals
+	Add a zone from a BasePart
+	Example: ZoneService:addZoneFromPart("ZoneB", "SafeZones", somePart, {Priority = 20, Dynamic = false})
 ]]
-function Zone.removeZone(self: ZoneService, zoneName: string)
-	local static, dynamic = zones[zoneName], dynamicZones[zoneName]
+function ZoneService:addZoneFromPart(zoneName: string, group: string, part: Part, params: {Priority: number?, Dynamic: boolean?}?)
+	ZoneService:addZone(zoneName, group, part.CFrame, part.Size, part.Shape.Name, params)
+end
+
+--[[
+	Cleans up the zone and disconnects all its signals
+]]
+function ZoneService:removeZone(zoneName: string)
+	local static, dynamic = Zones[zoneName], DynamicZones[zoneName]
 	local info = static or dynamic
 	if not info then return end
-	zones[zoneName] = nil
-	dynamicZones[zoneName] = nil
-	zonesById[info.ZoneId] = nil
+	Zones[zoneName] = nil
+	DynamicZones[zoneName] = nil
+	ZonesById[info.ZoneId] = nil
 	local groupId = info.GroupId
 	
 	local enteredSignal = info.EnteredSignal
@@ -428,32 +430,32 @@ function Zone.removeZone(self: ZoneService, zoneName: string)
 	local subjsInZone = info.Subjects
 	for subj, _ in subjsInZone do
 		if exitSignal then exitSignal:Fire(subj) end
-		local subjInfo = subjectsTracker[subj]
+		local subjInfo = SubjectsTracker[subj]
 		if not subjInfo then continue end
 		buffer.writeu32(subjInfo.CurrZones, groupId * 4, 0)
 		buffer.writeu32(subjInfo.PrevZones, groupId * 4, 0)
 	end
 	if exitSignal then exitSignal:DisconnectAll() end
 	if static then
-		rebuildStatic = true
-		numStaticZones -= 1
+		RebuildStatic = true
+		NumStaticZones -= 1
 	else
-		rebuildDynamic = true
-		numDynamicZones -= 1
+		RebuildDynamic = true
+		NumDynamicZones -= 1
 	end
 end
 
-function Zone.ballSize(radius: number): Vector3
+function ZoneService.ballSize(radius: number): Vector3
 	return Vector3.new(radius, radius, radius)
 end
 
-function Zone.cylinderSize(radius: number, height: number): Vector3
+function ZoneService.cylinderSize(radius: number, height: number): Vector3
 	return Vector3.new(height, radius, radius)
 end
 
-function Zone.updateZone(self: ZoneService, zoneName: string, cframe: CFrame?, size: Vector3?)
-	local dynamic = dynamicZones[zoneName]
-	local static = zones[zoneName]
+function ZoneService:updateZone(zoneName: string, cframe: CFrame?, size: Vector3?)
+	local dynamic = DynamicZones[zoneName]
+	local static = Zones[zoneName]
 	local info = dynamic or static
 	if not info then return end 
 	
@@ -462,50 +464,53 @@ function Zone.updateZone(self: ZoneService, zoneName: string, cframe: CFrame?, s
 	local zoneType = info.Type
 	
 	if zoneType == ENUM_BLOCK then
-		updateBlock(cframe, size, info)	
+		updateBlock(cframe :: CFrame, size :: Vector3, info)	
 
 	elseif zoneType == ENUM_BALL then
-		updateBall(cframe, size, info)
+		updateBall(cframe :: CFrame, size :: Vector3, info)
 
 	elseif zoneType == ENUM_CYLINDER then
-		updateCylinder(cframe, size, info)
+		updateCylinder(cframe :: CFrame, size :: Vector3, info)
 		
 	elseif zoneType == ENUM_WEDGE then
-		updateWedge(cframe, size, info)
+		updateWedge(cframe :: CFrame, size :: Vector3, info)
 	
 	elseif zoneType == ENUM_CORNERWEDGE then
-		updateCornerWedge(cframe, size, info)
+		updateCornerWedge(cframe :: CFrame, size :: Vector3, info)
 	end
 	
 	if static then
-		rebuildStatic = true
+		RebuildStatic = true
 	else
-		dynamicTree:updateBounds(info.PosLower, info.PosUpper)
-		rebuildDynamic = true
+		DynamicTree:updateBounds(info.PosLower, info.PosUpper)
+		RebuildDynamic = true
 	end
 end
 
 --[[
-Higher value = higher priority
+	Higher value = higher priority
 ]]
-function Zone.setPriority(self: ZoneService, zoneName: string, priority: number)
-	local info = zones[zoneName] or dynamicZones[zoneName]
+function ZoneService:setPriority(zoneName: string, priority: number)
+	local info = Zones[zoneName] or DynamicZones[zoneName]
 	if not info then return end 
+	
 	info.Priority = priority
 end
 
-function Zone.getZones(self: ZoneService, subject: Subject): {string}?
-	local subjInfo = subjectsTracker[subject]
-	if not subjInfo then return end
+function ZoneService:getZones(subject: Subject): {string}?
+	local subjInfo = SubjectsTracker[subject]
+	if not subjInfo then return nil end
+	
 	local currZones = subjInfo.CurrZones
 	local results = {}
 	local ptr = 0
 	
-	for i = 0, groupId - 1 do
+	for i = 0, GroupId - 1 do
 		local zoneId = buffer.readu32(currZones, ptr)
 		ptr += 4
 		if zoneId == 0 then continue end
-		local zone = zonesById[zoneId]
+		
+		local zone = ZonesById[zoneId]
 		local name = zone and zone.Name
 		table.insert(results, name)
 	end
@@ -513,18 +518,17 @@ function Zone.getZones(self: ZoneService, subject: Subject): {string}?
 end
 
 --[[
-Example: Players.PlayerAdded:Connect(function(player)
-	ZoneService:track(player)
-end)
+	Example: Players.PlayerAdded:Connect(function(player)
+		ZoneService:track(player)
+	end)
 ]]
-function Zone.track(self: ZoneService, subject: Subject)
-	if subjectsFrameIdx[subject] ~= nil then return end
-	local info: SubjectInfo = {}
+function ZoneService:track(subject: Subject)
+	if SubjectsFrameIdx[subject] ~= nil then return end
 	
 	local subjType
 	if type(subject) == "table" then
 		if not subject.Position then
-			warn(SOURCE.." Failed to add table subject: must have Position field")
+			warn(`{SOURCE} Failed to add table subject: must have Position field`)
 			return
 		end
 		subjType = ENUM_OTHER
@@ -542,47 +546,50 @@ function Zone.track(self: ZoneService, subject: Subject)
 		end
 	end
 	
-	info.Type = subjType
-	info.Candidates = {}
-	info.CurrZones = buffer.create(MAX_GROUPS * 4)
-	info.PrevZones = buffer.create(MAX_GROUPS * 4)
-	info.ChangedSignals = {}
-	info.Active = true
+	local info: SubjectInfo = {
+		Type = subjType,
+		Candidates = {},
+		CurrZones = buffer.create(MAX_GROUPS * 4),
+		PrevZones = buffer.create(MAX_GROUPS * 4),
+		ChangedSignals = {},
+		Active = true,
+	}
 	
 	local frameIdx = getSmallestBucket()
-	subjects[frameIdx][subject] = info
-	subjectsFrameIdx[subject] = frameIdx
-	bucketSizes[frameIdx] += 1
-	subjectsTracker[subject] = info
+	Subjects[frameIdx][subject] = info
+	SubjectsFrameIdx[subject] = frameIdx
+	BucketSizes[frameIdx] += 1
+	SubjectsTracker[subject] = info
 end
 
 --[[
-Example: Players.PlayerRemoving:Connect(function(player)
-	ZoneService:untrack(player)
-end)
-Note: Changed signals are automatically cleaned up
+	Example: Players.PlayerRemoving:Connect(function(player)
+		ZoneService:untrack(player)
+	end)
+	Note: Changed signals are automatically cleaned up
 ]]
-function Zone.untrack(self: ZoneService, subject: Subject)
-	local frameIdx = subjectsFrameIdx[subject]
+function ZoneService:untrack(subject: Subject)
+	local frameIdx = SubjectsFrameIdx[subject]
 	if not frameIdx then return end
 	
-	local subjInfo = subjectsTracker[subject]
+	local subjInfo = SubjectsTracker[subject]
 	if not subjInfo then return end 
-	subjectsTracker[subject] = nil
+	
+	SubjectsTracker[subject] = nil
 	subjInfo.Active = false
 	
-	local frameInfo = subjects[frameIdx]
+	local frameInfo = Subjects[frameIdx]
 	if frameInfo then
 		frameInfo[subject] = nil
 	end
-	subjectsFrameIdx[subject] = nil
-	bucketSizes[frameIdx] -= 1
+	SubjectsFrameIdx[subject] = nil
+	BucketSizes[frameIdx] -= 1
 	
-	for zoneName, zone in zones do
+	for zoneName, zone in Zones do
 		zone.Subjects[subject] = nil
 	end
 	
-	for zoneName, zone in dynamicZones do
+	for zoneName, zone in DynamicZones do
 		zone.Subjects[subject] = nil
 	end
 	
@@ -591,36 +598,35 @@ function Zone.untrack(self: ZoneService, subject: Subject)
 	end
 end
 
-local function getSignal(key: any, info: {[any]: any}?): Signal<any>
-	if not info then return end 
-	local signal = info[key]
+local function getSignal(key: any, signalContainer: any): Signal<any>
+	local signal = signalContainer[key]
 	if not signal then
 		signal = Signal.new()
-		info[key] = signal
+		signalContainer[key] = signal
 	end
 	return signal
 end
 
 --[[
-Example: ZoneService.changed(player, "SafeZones", function(zoneName: string?)
-	if zoneName then
-		print(player.Name.." now in "..zoneName)
-	else
-		print(player.Name.." not in a safe zone")
-	end
-end, true)
-Note: Does nothing if subject isn't tracked
+	Example: ZoneService.changed(player, "SafeZones", function(zoneName: string?)
+		if zoneName then
+			print(player.Name.." now in "..zoneName)
+		else
+			print(player.Name.." not in a safe zone")
+		end
+	end, true)
+	Note: Does nothing if subject isn't tracked
 ]]
-function Zone.changed(subject: Subject, group: string, callback: (zoneName: string?) -> (), prefire: boolean?)
-	: Signal.Connection<string?>
-	local subjInfo = subjectsTracker[subject]
-	local grpId = groupTracker[group]
-	if not subjInfo or not grpId then return end	
+function ZoneService.changed(subject: Subject, group: string, callback: (zoneName: string?) -> (), prefire: boolean?): Signal.Connection<string?>?
+	local subjInfo = SubjectsTracker[subject]
+	local grpId = GroupTracker[group]
+	if not subjInfo or not grpId then return nil end
+	
 	local signal = getSignal(grpId, subjInfo.ChangedSignals)
 	
 	if prefire ~= false then
 		local zoneId = buffer.readu32(subjInfo.CurrZones, grpId * 4)
-		local zone = zonesById[zoneId]
+		local zone = ZonesById[zoneId]
 		local name = zone and zone.Name
 		callback(name)
 	end	
@@ -628,31 +634,38 @@ function Zone.changed(subject: Subject, group: string, callback: (zoneName: stri
 end
 
 --[[
-Example: ZoneService.entered("ZoneA", function(subject)
-	print(subject.Name.." just entered ZoneA")
-end)
+	Example: ZoneService.entered("ZoneA", function(subject)
+		print(subject.Name.." just entered ZoneA")
+	end)
 ]]
-function Zone.entered(zoneName: string, callback: (subject: Subject) -> ()): Signal.Connection<Subject>
-	local zone = zones[zoneName] or dynamicZones[zoneName]
+function ZoneService.entered(zoneName: string, callback: (subject: Subject) -> ()): Signal.Connection<Subject>?
+	local zone = Zones[zoneName] or DynamicZones[zoneName]
+	if not zone then return nil end
+	
 	local signal = getSignal("EnteredSignal", zone)
 	return signal:Connect(callback)
 end
 
 --[[
-Example: ZoneService.exited("ZoneA", function(subject)
-	print(subject.Name.." just left ZoneA")
-end)
+	Example: ZoneService.exited("ZoneA", function(subject)
+		print(subject.Name.." just left ZoneA")
+	end)
 ]]
-function Zone.exited(zoneName: string, callback: (subject: Subject) -> ()): Signal.Connection<Subject>
-	local zone = zones[zoneName] or dynamicZones[zoneName]
+function ZoneService.exited(zoneName: string, callback: (subject: Subject) -> ()): Signal.Connection<Subject>?
+	local zone = Zones[zoneName] or DynamicZones[zoneName]
+	if not zone then return nil end
+	
 	local signal = getSignal("ExitedSignal", zone)
 	return signal:Connect(callback)
 end
 
-function Zone.getSubjectsInZone(self: ZoneService, zoneName: string): {[Subject]: boolean}?
-	local zone = zones[zoneName] or dynamicZones[zoneName]
-	local zoneSubjects = zone and zone.Subjects
-	if not zoneSubjects then return end 
+function ZoneService:getSubjectsInZone(zoneName: string): {[Subject]: boolean}?
+	local zone = Zones[zoneName] or DynamicZones[zoneName]
+	if not zone then return end
+	
+	local zoneSubjects = zone.Subjects
+	if not zoneSubjects then return nil end
+	
 	return table.clone(zoneSubjects)
 end
 
@@ -665,33 +678,34 @@ local function checkInZone(pos: Vector3, info: ZoneInfo): boolean
 
 	elseif zoneType == ENUM_BLOCK then
 		inBounds = basicBoundsCheck(
-			info.InverseCFrame:PointToWorldSpace(pos),
-			-info.HalfSize, 
-			info.HalfSize
+			(info.InverseCFrame :: CFrame):PointToWorldSpace(pos),
+			-info.HalfSize :: Vector3, 
+			info.HalfSize :: Vector3
 		)
 
 	elseif zoneType == ENUM_BALL then
-		inBounds = ballBoundsCheck(pos, info.Pos, info.Radius2)
+		inBounds = ballBoundsCheck(pos, info.Pos, info.Radius2 :: number)
 
 	elseif zoneType == ENUM_CYLINDER then
-		inBounds = cylinderBoundsCheck(pos, info.InverseCFrame, info.Radius2, info.HalfHeight)
+		inBounds = cylinderBoundsCheck(pos, info.InverseCFrame :: CFrame, info.Radius2 :: number, info.HalfHeight :: number)
 	
 	elseif zoneType == ENUM_WEDGE then
-		inBounds = wedgeBoundsCheck(pos, info.InverseCFrame, info.Slope, info.HalfSize)
+		inBounds = wedgeBoundsCheck(pos, info.InverseCFrame :: CFrame, info.Slope :: number, info.HalfSize :: Vector3)
 	
 	elseif zoneType == ENUM_CORNERWEDGE then
-		inBounds = cornerWedgeBoundsCheck(pos, info.InverseCFrame, info.SlopeX, info.SlopeZ, info.HalfSize)
+		inBounds = cornerWedgeBoundsCheck(pos, info.InverseCFrame :: CFrame, info.SlopeX :: number, info.SlopeZ :: number, info.HalfSize :: Vector3)
+		
 	end
 	return inBounds
 end
 
 --[[
-Returns names of zones that intersect given point
+	Returns names of zones that intersect given point
 ]]
-function Zone.getZonesAtPoint(self: ZoneService, point: Vector3): {string}
+function ZoneService:getZonesAtPoint(point: Vector3): {string}
 	local zones = {}
-	staticTree:query(point, zones)
-	dynamicTree:query(point, zones)
+	StaticTree:query(point, zones)
+	DynamicTree:query(point, zones)
 	local finalZones = {}
 
 	for _, info in zones do
@@ -703,8 +717,8 @@ function Zone.getZonesAtPoint(self: ZoneService, point: Vector3): {string}
 	return finalZones
 end
 
-function Zone.isPointInZone(self: ZoneService, point: Vector3, zoneName: string): boolean
-	local info = zones[zoneName] or dynamicZones[zoneName]
+function ZoneService:isPointInZone(point: Vector3, zoneName: string): boolean
+	local info = Zones[zoneName] or DynamicZones[zoneName]
 	if not info then return false end 
 	return checkInZone(point, info)
 end
@@ -713,23 +727,23 @@ local function randomFloat(min: number, max: number): number
 	return min + math.random() * (max - min)
 end
 
-function Zone.getRandomPointInZone(self: ZoneService, zoneName: string): Vector3?
-	local info = zones[zoneName] or dynamicZones[zoneName]
-	if not info then return end 
+function ZoneService:getRandomPointInZone(zoneName: string): Vector3?
+	local info = Zones[zoneName] or DynamicZones[zoneName]
+	if not info then return nil end 
 	
 	local shape = info.Type
 	if shape == ENUM_BLOCK then
-		local half = info.HalfSize
+		local half = info.HalfSize :: Vector3
 		local cframe = info.CFrame		
 		return cframe:PointToWorldSpace(Vector3.new(
 			randomFloat(-half.X, half.X),
 			randomFloat(-half.Y, half.Y),
 			randomFloat(-half.Z, half.Z)
-			))
+		))
 
 	elseif shape == ENUM_BALL then
-		local radius = info.Radius
-		local cframe = info.CFrame
+		local radius = info.Radius :: number
+		local cframe = info.CFrame :: CFrame
 		local z = randomFloat(-1, 1)
 		local theta = randomFloat(0, math.pi * 2)
 		local radial = math.sqrt(1 - z * z)
@@ -738,9 +752,9 @@ function Zone.getRandomPointInZone(self: ZoneService, zoneName: string): Vector3
 		return cframe:PointToWorldSpace(point)
 
 	elseif shape == ENUM_CYLINDER then
-		local radius = info.Radius
-		local halfHeight = info.HalfHeight
-		local cframe = info.CFrame
+		local radius = info.Radius :: number
+		local halfHeight = info.HalfHeight :: number
+		local cframe = info.CFrame :: CFrame
 
 		local theta = randomFloat(0, math.pi * 2)
 		local distance = radius * math.sqrt(math.random())
@@ -753,7 +767,7 @@ function Zone.getRandomPointInZone(self: ZoneService, zoneName: string): Vector3
 		return cframe:PointToWorldSpace(point)
 	
 	elseif shape == ENUM_WEDGE then
-		local halfSize = info.HalfSize
+		local halfSize = info.HalfSize :: Vector3
 		local halfX, halfY, halfZ = halfSize.X, halfSize.Y, halfSize.Z
 		local r1 = math.random()
 		local r2 = math.random()
@@ -768,7 +782,7 @@ function Zone.getRandomPointInZone(self: ZoneService, zoneName: string): Vector3
 		return info.CFrame:PointToWorldSpace(Vector3.new(x, y, z))
 		
 	elseif shape == ENUM_CORNERWEDGE then
-		local halfSize = info.HalfSize
+		local halfSize = info.HalfSize :: Vector3
 		local halfX, halfY, halfZ = halfSize.X, halfSize.Y, halfSize.Z	
 		local a = math.random()
 		local b = math.random()
@@ -795,6 +809,9 @@ function Zone.getRandomPointInZone(self: ZoneService, zoneName: string): Vector3
 		local y = a * 2 * halfY - halfY
 		local z = halfZ - v * 2 * halfZ
 		return info.CFrame:PointToWorldSpace(Vector3.new(x, y, z))
+		
+	else
+		return nil
 	end
 end
 
@@ -803,7 +820,7 @@ local function resolvePriority(zone: ZoneInfo, currZones: buffer)
 	local priority = zone.Priority
 	local ptr = group * 4
 	local currZoneId = buffer.readu32(currZones, group * 4)
-	local currZone = zonesById[currZoneId]
+	local currZone = ZonesById[currZoneId]
 	local current = currZone and currZone.Priority or -math.huge
 
 	if priority > current then
@@ -811,40 +828,42 @@ local function resolvePriority(zone: ZoneInfo, currZones: buffer)
 	end
 end
 
---Poll
-local deferred: boolean = false
+local function fireSignal(signal: Signal<any>?, arg1: any)
+	if signal then
+		signal:Fire(arg1)
+	end
+end
 
 local function poll()
-	if rebuildStatic then
-		if not deferred then
-			deferred = true
+	if RebuildStatic then
+		if not DeferredFlag then
+			DeferredFlag = true
 			return
 		end
-		updateTreeBounds(staticTree, zones)
-		staticTree:build(zones, numStaticZones)
-		rebuildStatic = false
-		deferred = false
+		updateTreeBounds(StaticTree, Zones)
+		StaticTree:build(Zones, NumStaticZones)
+		RebuildStatic = false
+		DeferredFlag = false
 		return
 	end
 	
-	if rebuildDynamic then
-		dynamicTree:build(dynamicZones, numDynamicZones)
-		rebuildDynamic = false
+	if RebuildDynamic then
+		DynamicTree:build(DynamicZones, NumDynamicZones)
+		RebuildDynamic = false
 	end
 
-	for subject: Subject, subjectInfo: SubjectInfo in subjects[getFrameNum()] do
-		if not subjectInfo.Active or not subject then
-			continue
-		end
+	for subject: Subject, subjectInfo: SubjectInfo in Subjects[getFrameNum()] do
+		if not subjectInfo.Active or not subject then continue end
+		
 		local subjCandidates = subjectInfo.Candidates
 		local subjCurrZones = subjectInfo.CurrZones
 		local subjPrevZones = subjectInfo.PrevZones
 		local subjChangedSignals = subjectInfo.ChangedSignals
 		local subjectType = subjectInfo.Type
-		local pos
+		local pos: Vector3
 
 		if subjectType == ENUM_PLAYER then
-			local char = subject.Character
+			local char = (subject :: Player).Character
 			if not char then
 				subjectInfo.RootPart = nil
 				continue
@@ -853,27 +872,26 @@ local function poll()
 				local rootPart = char:FindFirstChild("HumanoidRootPart")
 				if rootPart then
 					subjectInfo.Char = char
-					subjectInfo.RootPart = rootPart
+					subjectInfo.RootPart = rootPart :: BasePart
 				end
 			end
 
 			local rootPart = subjectInfo.RootPart
-			if not rootPart then
-				continue
-			end
+			if not rootPart then continue end
+			
 			pos = rootPart.Position
 
 		elseif subjectType == ENUM_MODEL then
-			pos = subject:GetPivot().Position
+			pos = (subject :: Model):GetPivot().Position
 
 		else
-			pos = subject.Position
+			pos = (subject :: {Position: Vector3}).Position
 		end
 
 		table.clear(subjCandidates)
 		buffer.fill(subjCurrZones, 0, 0)
-		staticTree:query(pos, subjCandidates)
-		dynamicTree:query(pos, subjCandidates)
+		StaticTree:query(pos, subjCandidates)
+		DynamicTree:query(pos, subjCandidates)
 
 		for _, info in subjCandidates do			
 			if not checkInZone(pos, info) then
@@ -882,103 +900,90 @@ local function poll()
 			resolvePriority(info, subjCurrZones)
 		end
 
-		--update subject's zones/fire signals
+		-- Update subject's zones and fire signals
 		local ptr = 0
-		for i = 0, groupId - 1 do
+		for groupId = 0, GroupId - 1 do
 			local oldZoneId = buffer.readu32(subjPrevZones, ptr)
 			local newZoneId = buffer.readu32(subjCurrZones, ptr)
 			ptr += 4
 			if oldZoneId == newZoneId then continue end
 			
 			if oldZoneId == 0 then
-				local newZone = zonesById[newZoneId]
+				local newZone = ZonesById[newZoneId]
 				newZone.Subjects[subject] = true
-				
-				local enterSignal = newZone.EnteredSignal
-				if enterSignal then enterSignal:Fire(subject) end
-				local changedSignal = subjChangedSignals[i]
-				if changedSignal then changedSignal:Fire(newZone.Name) end
+				fireSignal(newZone.EnteredSignal, subject)
+				fireSignal(subjChangedSignals[groupId], newZone.Name)
 				
 			elseif newZoneId ~= 0 then
-				local oldZone = zonesById[oldZoneId]
-				local newZone = zonesById[newZoneId]				
+				local oldZone = ZonesById[oldZoneId]
+				local newZone = ZonesById[newZoneId]				
 				oldZone.Subjects[subject] = nil
 				newZone.Subjects[subject] = true
 				
-				local exitSignal = oldZone.ExitedSignal
-				if exitSignal then exitSignal:Fire(subject) end
-				local enterSignal = newZone.EnteredSignal
-				if enterSignal then enterSignal:Fire(subject) end
-				
-				local changedSignal = subjChangedSignals[i]
-				if changedSignal then changedSignal:Fire(newZone.Name) end
+				fireSignal(oldZone.ExitedSignal, subject)
+				fireSignal(newZone.EnteredSignal, subject)
+				fireSignal(subjChangedSignals[groupId], newZone.Name)
 				
 			elseif newZoneId == 0 then
-				local oldZone = zonesById[oldZoneId]
+				local oldZone = ZonesById[oldZoneId]
 				oldZone.Subjects[subject] = nil
 				
-				local exitSignal = oldZone.ExitedSignal
-				if exitSignal then exitSignal:Fire(subject) end
-				local changedSignal = subjChangedSignals[i]
-				if changedSignal then changedSignal:Fire(nil) end
+				fireSignal(oldZone.ExitedSignal, subject)
+				fireSignal(subjChangedSignals[groupId], nil)
 			end
 		end
 		buffer.copy(subjPrevZones, 0, subjCurrZones, 0)
 	end
 end
 
-function Zone.stopPoll(self: ZoneService)
-	if pollConnection then
-		pollConnection:Disconnect()
-		pollConnection = nil
+function ZoneService:stopPoll()
+	if PollConnection then
+		PollConnection:Disconnect()
+		PollConnection = nil
 	end
 end
 
-function Zone.startPoll(self:ZoneService)
-	if pollConnection then return end
-	pollConnection = RunService.Heartbeat:Connect(poll)
+function ZoneService:startPoll()
+	if PollConnection then return end
+	PollConnection = RunService.Heartbeat:Connect(poll)
 end
 
-function Zone.rebuildStaticBVH(self: ZoneService)
-	rebuildStatic = true
+function ZoneService:rebuildStaticBVH()
+	RebuildStatic = true
 end
 
-function Zone.rebuildDynamicBVH(self: ZoneService)
-	rebuildDynamic = true
+function ZoneService:rebuildDynamicBVH()
+	RebuildDynamic = true
 end
 
-function Zone.updateDynamicBounds(self: ZoneService)
-	updateTreeBounds(dynamicTree, dynamicZones)
+function ZoneService:updateDynamicBounds()
+	updateTreeBounds(DynamicTree, DynamicZones)
 end
 
-function Zone.destroy(self: ZoneService)
-	self:stopPoll()
-	
-	for zoneName, _ in zones do
-		self:removeZone(zoneName)
-	end
-	
-	for zoneName, _ in dynamicZones do
-		self:removeZone(zoneName)
-	end
-	
-	for subj, _ in subjectsTracker do
-		self:untrack(subj)
-	end
-	
-	table.clear(groupTracker)
-	zoneId = 1
-	groupId = 0
-	numStaticZones = 0
-	numDynamicZones = 0
-	rebuildStatic = false
-	rebuildDynamic = false
-	staticTree:reset()
-	dynamicTree:reset()
-	deferred = false
-end
---API end
+-- Aliases
+ZoneService.AddZone = ZoneService.addZone
+ZoneService.AddZoneFromPart = ZoneService.addZoneFromPart
+ZoneService.RemoveZone = ZoneService.removeZone
+ZoneService.BallSize = ZoneService.ballSize
+ZoneService.CylinderSize = ZoneService.cylinderSize
+ZoneService.UpdateZone = ZoneService.updateZone
+ZoneService.SetPriority = ZoneService.setPriority
+ZoneService.GetZones = ZoneService.getZones
+ZoneService.Track = ZoneService.track
+ZoneService.Untrack = ZoneService.untrack
+ZoneService.Changed = ZoneService.changed
+ZoneService.Entered = ZoneService.entered
+ZoneService.Exited = ZoneService.exited
+ZoneService.GetSubjectsInZone = ZoneService.getSubjectsInZone
+ZoneService.GetZonesAtPoint = ZoneService.getZonesAtPoint
+ZoneService.IsPointInZone = ZoneService.isPointInZone
+ZoneService.GetRandomPointInZone = ZoneService.getRandomPointInZone
+ZoneService.StopPoll = ZoneService.stopPoll
+ZoneService.StartPoll = ZoneService.startPoll
+ZoneService.RebuildStaticBVH = ZoneService.rebuildStaticBVH
+ZoneService.RebuildDynamicBVH = ZoneService.rebuildDynamicBVH
+ZoneService.UpdateDynamicBounds = ZoneService.updateDynamicBounds
 
-pollConnection = RunService.Heartbeat:Connect(poll)
+PollConnection = RunService.Heartbeat:Connect(poll)
 
-return Zone
+return ZoneService

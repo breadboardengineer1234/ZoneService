@@ -1,3 +1,4 @@
+--!strict
 --!optimize 2
 --!native
 
@@ -11,6 +12,8 @@ const ENUM_BLOCK = Enums.Block
 const ENUM_BALL = Enums.Ball
 const ENUM_CYLINDER = Enums.Cylinder
 const MORTON_RANGE = 1023
+const EMPTY_BUFFER = buffer.create(1)
+const EMPTY_TABLE: any = table.freeze({})
 
 local function createSpreadLookup(): {number}
 	local spread = table.create(MORTON_RANGE + 1)
@@ -268,8 +271,8 @@ local function query(self: Tree, pos: Vector3, results: {ZoneInfo})
 end
 
 local function updateBounds(self: Tree, min: Vector3, max: Vector3)
-	self.minBound = vector.min(min :: vector, self.minBound)
-	self.maxBound = vector.max(max :: vector, self.maxBound)
+	self.minBound = vector.min(min :: any, self.minBound)
+	self.maxBound = vector.max(max :: any, self.maxBound)
 end
 
 local function setBounds(self: Tree, min: vector, max: vector)
@@ -282,12 +285,12 @@ local function reset(self: Tree)
 	self.maxBound = vector.create(-math.huge, -math.huge, -math.huge)
 	self.nodeCount = 0
 	self.nextNode = 0
-	self.nodeMin = nil
-	self.nodeMax = nil
-	self.nodeSkip = nil
-	self.nodeZone = nil
-	self.orderedZones = nil
-	self.mortonCodes = nil
+	self.nodeMin = EMPTY_BUFFER
+	self.nodeMax = EMPTY_BUFFER
+	self.nodeSkip = EMPTY_BUFFER
+	self.nodeZone = EMPTY_TABLE
+	self.orderedZones = EMPTY_TABLE
+	self.mortonCodes = EMPTY_TABLE
 	self.prevNodeCount = 0
 end
 
@@ -297,13 +300,13 @@ function BVH.new(): Tree
 	local tree: Tree = {
 		nodeCount = 0,
 		nextNode = 0,
-		nodeMin = nil,
-		nodeMax = nil,
-		nodeSkip = nil,
-		nodeZone = nil,
+		nodeMin = EMPTY_BUFFER,
+		nodeMax = EMPTY_BUFFER,
+		nodeSkip = EMPTY_BUFFER,
+		nodeZone = EMPTY_TABLE,
 		
-		orderedZones = nil,
-		mortonCodes = nil,
+		orderedZones = EMPTY_TABLE,
+		mortonCodes = EMPTY_TABLE,
 		
 		minBound = vector.create(math.huge, math.huge, math.huge),
 		maxBound = vector.create(-math.huge, -math.huge, -math.huge),
