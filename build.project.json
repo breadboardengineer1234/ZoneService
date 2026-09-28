@@ -4,7 +4,7 @@
     "$path": "src",
     "$properties": {
       "Attributes": {
-        "Version": {"String": "0.3.0"}
+        "Version": {"String": "0.4.0"}
       }
     }
   }
