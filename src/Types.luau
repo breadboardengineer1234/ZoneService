@@ -17,8 +17,8 @@ export type Tree = {
 	nodeSkip: buffer,
 	nodeZone: {ZoneInfo},
 
-	orderedZones: {ZoneInfo},
-	mortonCodes: {number},
+	orderedZones: {ZoneInfo}?,
+	mortonCodes: {number}?,
 
 	minBound: vector,
 	maxBound: vector,

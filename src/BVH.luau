@@ -80,8 +80,8 @@ local function computeMorton(self: Tree, zones: {[string]: ZoneInfo}, numZones: 
 	local yScale = min.y == max.y and 0 or MORTON_RANGE / (max.y - min.y)
 	local zScale = min.z == max.z and 0 or MORTON_RANGE / (max.z - min.z)
 	
-	local orderedZones = self.orderedZones
-	local mortonCodes = self.mortonCodes
+	local orderedZones = self.orderedZones :: {ZoneInfo}
+	local mortonCodes = self.mortonCodes :: {number}
 	local idx = 1
 	
 	for _, zone in zones do
@@ -166,7 +166,7 @@ local function buildTree(self: Tree, morton: {number}, start: number, finish: nu
 	local nodeSkip = self.nodeSkip
 
 	if start == finish then
-		local zone = self.orderedZones[start]
+		local zone = (self.orderedZones :: {ZoneInfo})[start]
 		local ptrPos = (node - 1) * 12
 		local ptrSkip = (node - 1) * 4
 		local posLower, posUpper = zone.PosLower, zone.PosUpper
@@ -290,8 +290,8 @@ local function reset(self: Tree)
 	self.nodeMax = EMPTY_BUFFER
 	self.nodeSkip = EMPTY_BUFFER
 	self.nodeZone = EMPTY_TABLE
-	self.orderedZones = EMPTY_TABLE
-	self.mortonCodes = EMPTY_TABLE
+	self.orderedZones = nil
+	self.mortonCodes = nil
 	self.prevNodeCount = 0
 end
 
@@ -306,8 +306,8 @@ function BVH.new(): Tree
 		nodeSkip = EMPTY_BUFFER,
 		nodeZone = EMPTY_TABLE,
 		
-		orderedZones = EMPTY_TABLE,
-		mortonCodes = EMPTY_TABLE,
+		orderedZones = nil,
+		mortonCodes = nil,
 		
 		minBound = vector.create(math.huge, math.huge, math.huge),
 		maxBound = vector.create(-math.huge, -math.huge, -math.huge),

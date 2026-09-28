@@ -29,9 +29,9 @@ local ZoneService = {}
 
 local RunService = game:GetService("RunService")
 
+local BVH = require(script.BVH)
 local Types = require(script.Types)
 local Enums = require(script.Enums)
-local BVH = require(script.BVH)
 local Config = require(script.Config)
 local Signal = require(script.UsefulSignal)
 
@@ -609,7 +609,6 @@ function ZoneService.changed(subject: Subject, group: string, callback: (zoneNam
 	if not subjInfo or not grpId then return nil end
 	
 	local signal = getSignal(grpId, subjInfo.ChangedSignals)
-	
 	if prefire ~= false then
 		local zoneId = buffer.readu32(subjInfo.CurrZones, grpId * 4)
 		local zone = ZonesById[zoneId]
