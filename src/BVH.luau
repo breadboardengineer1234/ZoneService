@@ -16,7 +16,7 @@ const EMPTY_BUFFER = buffer.create(1)
 const EMPTY_TABLE: any = table.freeze({})
 
 local function createSpreadLookup(): {number}
-	local spread = table.create(MORTON_RANGE + 1)
+	local spread = table.create(MORTON_RANGE + 1) :: {number}
 	local maxBit = math.log(MORTON_RANGE + 1, 2)
 	
 	for i = 0, MORTON_RANGE do
@@ -103,13 +103,13 @@ local function allocateCaches(self: Tree, numZones: number)
 	if self.orderedZones then
 		table.clear(self.orderedZones)
 	else
-		self.orderedZones = table.create(numZones)
+		self.orderedZones = table.create(numZones) :: {ZoneInfo}
 	end
 
 	if self.mortonCodes then
 		table.clear(self.mortonCodes)
 	else
-		self.mortonCodes = table.create(numZones)
+		self.mortonCodes = table.create(numZones) :: {number}
 	end
 end
 
@@ -124,7 +124,7 @@ local function allocateNodes(self: Tree, nodeCount: number)
 	self.nodeMin = buffer.create(nodeCount * 12)
 	self.nodeMax = buffer.create(nodeCount * 12)
 	self.nodeSkip = buffer.create(nodeCount * 4)
-	self.nodeZone = table.create(nodeCount)
+	self.nodeZone = table.create(nodeCount) :: {ZoneInfo}
 end
 
 local function findSplit(morton: {number}, start: number, finish: number): number
@@ -239,6 +239,7 @@ local function query(self: Tree, pos: Vector3, results: {ZoneInfo})
 	local node = 1
 	local count = self.nodeCount
 	if count <= 0 then return end
+	
 	local nodeMin, nodeMax = self.nodeMin, self.nodeMax
 	local nodeSkip = self.nodeSkip
 	local nodeZone = self.nodeZone
