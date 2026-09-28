@@ -31,10 +31,6 @@ export type Tree = {
 	reset: (self: Tree) -> (),
 }
 
-export type ZoneMethods = {
-	
-}
-
 export type ZoneInfo = {
 	Type: number,
 	HalfSize: Vector3?,

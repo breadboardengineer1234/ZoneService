@@ -58,52 +58,38 @@ export type Shape = Types.Shape
 export type Params = Types.Params
 export type Subject = Types.Subject
 
-local function getFrameBuckets(numFrames: number, buckets: {Bucket}?): {Bucket}
-	if buckets then
-		table.clear(buckets)
+local function getFrameBuckets(frameCount: number): {Bucket}
+	local buckets: {Bucket} = {}
+	for i = 1, frameCount do
+		table.insert(buckets, {} :: Bucket)
 	end
-	buckets = buckets or {}
-	for i = 1, numFrames do
-		table.insert(buckets :: {Bucket}, {} :: Bucket)
-	end
-	return buckets :: {Bucket}
-end
-
-local function initBucketSizes(numFrames: number, sizes: {number}?): {number}
-	if sizes then
-		table.clear(sizes)
-	end
-	sizes = sizes or {}
-	for i = 1, numFrames do
-		(sizes :: {number})[i] = 0
-	end
-	return sizes :: {number}
+	return buckets
 end
 
 local DeferredFlag: boolean = false
 
-local NumFrames: number = POLLING_INTERVAL
-local FrameNum: number = 0
+local FrameCount: number = POLLING_INTERVAL
+local CurrentFrame: number = 0
 local PollConnection: RBXScriptConnection? = nil
 local CurrentZoneId: number = 1
-local GroupId: number  = 0 --start at 0
+local CurrentGroupId: number = 0 --start at 0
 local GroupTracker: {[string]: number} = {}
 
-local NumStaticZones: number = 0
-local NumDynamicZones: number = 0
+local StaticZoneCount: number = 0
+local DynamicZoneCount: number = 0
 local Zones: {[string]: ZoneInfo} = {}
 local ZonesById: {[number]: ZoneInfo} = {}
 local DynamicZones: {[string]: ZoneInfo} = {}
 
-local Subjects: {Bucket} = getFrameBuckets(NumFrames)
+local Subjects: {Bucket} = getFrameBuckets(FrameCount)
 local SubjectsTracker: {[Subject]: SubjectInfo} = {}
 local SubjectsFrameIdx: {[Subject]: number} = {}
-local BucketSizes: {number} = initBucketSizes(NumFrames)
+local BucketSizes: {number} = table.create(FrameCount, 0)
 
-local RebuildStatic: boolean = false
-local RebuildDynamic: boolean = false
-local StaticTree: Tree = BVH.new()
-local DynamicTree: Tree = BVH.new()
+local StaticRebuildScheduled: boolean = false
+local DynamicRebuildScheduled: boolean = false
+local StaticTree = BVH.new()
+local DynamicTree = BVH.new()
 
 local function getRadiusBall(size: Vector3): number
 	return math.min(size.X, size.Y, size.Z) * .5
@@ -223,11 +209,11 @@ local function getSmallestBucket(): number
 end
 
 local function getFrameNum(): number
-	FrameNum += 1
-	if FrameNum > NumFrames then
-		FrameNum = 1
+	CurrentFrame += 1
+	if CurrentFrame > FrameCount then
+		CurrentFrame = 1
 	end
-	return FrameNum
+	return CurrentFrame
 end
 
 local function getDimensionsCylinder(size: Vector3): (number, number)
@@ -318,7 +304,7 @@ end
 
 local function addZone(zoneName: string, group: string, cframe: CFrame, size: Vector3, shape: Shape, params: {Priority: number?, Dynamic: boolean?}?)
 	local existingGroupId = GroupTracker[group]
-	if not existingGroupId and GroupId >= MAX_GROUPS then
+	if not existingGroupId and CurrentGroupId >= MAX_GROUPS then
 		warn(`{SOURCE} Failed to add zone {zoneName}: exceeded max number of groups ({MAX_GROUPS})`)
 		return
 	end
@@ -361,8 +347,8 @@ local function addZone(zoneName: string, group: string, cframe: CFrame, size: Ve
 	if existingGroupId then
 		newGroupId = existingGroupId
 	else
-		newGroupId = GroupId
-		GroupId += 1
+		newGroupId = CurrentGroupId
+		CurrentGroupId += 1
 		GroupTracker[group] = newGroupId
 	end
 
@@ -380,12 +366,12 @@ local function addZone(zoneName: string, group: string, cframe: CFrame, size: Ve
 	if dynamic then
 		DynamicTree:updateBounds(info.PosLower, info.PosUpper)
 		DynamicZones[zoneName] = info
-		NumDynamicZones += 1
-		RebuildDynamic = true
+		DynamicZoneCount += 1
+		DynamicRebuildScheduled = true
 	else
 		Zones[zoneName] = info
-		NumStaticZones += 1
-		RebuildStatic = true
+		StaticZoneCount += 1
+		StaticRebuildScheduled = true
 	end
 end
 --[[
@@ -437,11 +423,11 @@ function ZoneService:removeZone(zoneName: string)
 	end
 	if exitSignal then exitSignal:DisconnectAll() end
 	if static then
-		RebuildStatic = true
-		NumStaticZones -= 1
+		StaticRebuildScheduled = true
+		StaticZoneCount -= 1
 	else
-		RebuildDynamic = true
-		NumDynamicZones -= 1
+		DynamicRebuildScheduled = true
+		DynamicZoneCount -= 1
 	end
 end
 
@@ -480,10 +466,10 @@ function ZoneService:updateZone(zoneName: string, cframe: CFrame?, size: Vector3
 	end
 	
 	if static then
-		RebuildStatic = true
+		StaticRebuildScheduled = true
 	else
 		DynamicTree:updateBounds(info.PosLower, info.PosUpper)
-		RebuildDynamic = true
+		DynamicRebuildScheduled = true
 	end
 end
 
@@ -505,7 +491,7 @@ function ZoneService:getZones(subject: Subject): {string}?
 	local results = {}
 	local ptr = 0
 	
-	for i = 0, GroupId - 1 do
+	for i = 0, CurrentGroupId - 1 do
 		local zoneId = buffer.readu32(currZones, ptr)
 		ptr += 4
 		if zoneId == 0 then continue end
@@ -661,7 +647,7 @@ end
 
 function ZoneService:getSubjectsInZone(zoneName: string): {[Subject]: boolean}?
 	local zone = Zones[zoneName] or DynamicZones[zoneName]
-	if not zone then return end
+	if not zone then return nil end
 	
 	local zoneSubjects = zone.Subjects
 	if not zoneSubjects then return nil end
@@ -835,21 +821,21 @@ local function fireSignal(signal: Signal<any>?, arg1: any)
 end
 
 local function poll()
-	if RebuildStatic then
+	if StaticRebuildScheduled then
 		if not DeferredFlag then
 			DeferredFlag = true
 			return
 		end
 		updateTreeBounds(StaticTree, Zones)
-		StaticTree:build(Zones, NumStaticZones)
-		RebuildStatic = false
+		StaticTree:build(Zones, StaticZoneCount)
+		StaticRebuildScheduled = false
 		DeferredFlag = false
 		return
 	end
 	
-	if RebuildDynamic then
-		DynamicTree:build(DynamicZones, NumDynamicZones)
-		RebuildDynamic = false
+	if DynamicRebuildScheduled then
+		DynamicTree:build(DynamicZones, DynamicZoneCount)
+		DynamicRebuildScheduled = false
 	end
 
 	for subject: Subject, subjectInfo: SubjectInfo in Subjects[getFrameNum()] do
@@ -902,7 +888,7 @@ local function poll()
 
 		-- Update subject's zones and fire signals
 		local ptr = 0
-		for groupId = 0, GroupId - 1 do
+		for groupId = 0, CurrentGroupId - 1 do
 			local oldZoneId = buffer.readu32(subjPrevZones, ptr)
 			local newZoneId = buffer.readu32(subjCurrZones, ptr)
 			ptr += 4
@@ -949,11 +935,11 @@ function ZoneService:startPoll()
 end
 
 function ZoneService:rebuildStaticBVH()
-	RebuildStatic = true
+	StaticRebuildScheduled = true
 end
 
 function ZoneService:rebuildDynamicBVH()
-	RebuildDynamic = true
+	DynamicRebuildScheduled = true
 end
 
 function ZoneService:updateDynamicBounds()
