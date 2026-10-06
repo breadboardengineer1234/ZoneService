@@ -1,7 +1,7 @@
 # ZoneService
 Simple zone detection library with insane optimization.
 
-[Documentation](https://github.com/breadboardengineer1234/ZoneService/blob/main/docs/docs.md)
+[Get Started](https://breadboardengineer1234.github.io/ZoneService/)
 
 # Benchmarks
 All tests are conducted with continuously moving entities. The first 4 tests are done with stationary zones. ZoneService and QuickZone are both run with a 30 Hz polling rate, Zoner is set to a custom added "Faster" rate that's 30 Hz with Parallel execution turned on, ZonePlus is set to Precise rate, and SimplerZone is left at default. See [code](https://github.com/breadboardengineer1234/ZoneService/tree/main/benchmarks) for more details.
